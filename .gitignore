@@ -2,6 +2,7 @@
 # Ignore database files and private local files
 *.db
 *local/
+logs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
