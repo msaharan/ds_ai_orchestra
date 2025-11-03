@@ -3,24 +3,53 @@
 ## System Overview
 
 ```mermaid
-graph TD
-    User --> CLI[CLI interface]
-    CLI --> Agent{LangGraph agent}
-    Agent --> Prompt[System prompt]
-    Agent --> ToolSelect[Tool selection]
-    ToolSelect --> SQLTools[SQL toolkit]
-    ToolSelect --> MCPTools[MCP toolkit]
-    SQLTools --> Validator[Read-only validator]
-    Validator --> Runtime[(Runtime context: SQLDatabase)]
-    Runtime --> Database[(SQLite database)]
-    MCPTools --> Runtime
-    Runtime --> Result[Query results]
-    Result --> Agent
-    Agent --> Memory[(Checkpointer: InMemory/SQLite/Redis)]
-    Memory --> Agent
-    Agent --> Logger[Conversation logger]
-    Agent --> Output[Response to user]
-    Database --> Result
+flowchart TD
+    subgraph User
+        U([User])
+    end
+
+    subgraph CLI[Terminal CLI]
+        REPL[run_cli REPL]
+        LOG[ConversationLogger]
+    end
+
+    subgraph Agent[LangGraph Agent]
+        PROMPT[System Prompt]
+    end
+
+    subgraph Memory
+        CHECKPOINT[(Checkpointer<br/>InMemory / Sqlite / Redis)]
+    end
+
+    subgraph Tools
+        subgraph SQL[SQL Toolkit]
+            LIST[list_tables]
+            DESC[describe_table]
+            EXEC[execute_sql]
+            DB[(SQLDatabase)]
+        end
+        subgraph MCP[Optional MCP Tools]
+            MCPWRAP[MCP wrappers]
+        end
+    end
+
+    U --> REPL
+    REPL --> PROMPT
+    PROMPT --> CHECKPOINT
+    CHECKPOINT --> PROMPT
+    PROMPT --> LIST
+    PROMPT --> DESC
+    PROMPT --> EXEC
+    EXEC --> DB
+    DB --> EXEC
+    LIST --> PROMPT
+    DESC --> PROMPT
+    PROMPT --> MCPWRAP
+    MCPWRAP --> PROMPT
+    PROMPT --> LOG
+    LOG --> REPL
+    PROMPT --> OUTPUT[[Response to user]]
+    OUTPUT --> U
 ```
 
 ## Core Components
@@ -60,7 +89,7 @@ graph TD
 ### Structured output
 - Pydantic models (for example `InvoiceSummary`) describe JSON responses.
 - `STRUCTURED_PROMPTS` maps schema keys to `(model, instructions, suffix)` tuples.
-- Passing `--structured-output <key>` prompts the agent to validate responses before returning them.
+- Passing `--structured-output <key>` instructs the agent to respond with the chosen schema and the CLI validates the returned JSON before displaying it, surfacing any validation errors to the user.
 
 ## Extension Points
 
@@ -73,7 +102,7 @@ graph TD
 
 ### Defense in depth
 1. Query validation: rejects non-SELECT statements and DML/DDL keywords before they reach SQLite.
-2. Database isolation: the agent uses SQLite read-only connections by default and downloads the canonical Chinook snapshot if missing.
+2. Database isolation: the runtime downloads the canonical Chinook snapshot if missing and enforces read-only access via input validation; the SQLite connection itself uses the standard driver, so file-level permissions can provide an additional read-only guarantee when needed.
 3. Observability: optional JSONL logging (`--log-path`) captures every turn for auditing.
 
 ### Threat model
