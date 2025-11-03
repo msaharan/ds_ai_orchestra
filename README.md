@@ -16,7 +16,7 @@ Conversational SQL assistant built with LangGraph that delivers concise, decisio
 - Python 3.11–3.13
 - [`uv`](https://docs.astral.sh/uv/) (recommended) or `pip`
 - OpenAI-compatible API key exposed as `OPENAI_API_KEY` in `.env`
-- Optional: Redis (for `--memory-backend redis`), Node.js/npm (`npx`) for the sample MCP time server, LangSmith credentials for tracing
+- Optional: Redis (for `--memory-backend redis`), Node.js/npm (`npx`) for the sample MCP time server, `langchain-mcp-adapters` for MCP integration, LangSmith credentials for tracing
 
 > The entry point refuses to start if `.env` is missing. Copy `example.env` and populate the required keys before launching.
 
@@ -50,7 +50,7 @@ Helpful flags:
 - `--memory-backend sqlite --memory-path ./state/agent.db` – persist conversation context between runs
 - `--enable-mcp-time` or `--mcp-config path/to/config.json` – attach MCP tool servers
 - `--log-path run/conversation.jsonl` – capture every user and agent message for auditing
-- `--event-stream` / `--no-stream` – switch between detailed LangGraph streaming and single-response mode
+- `--event-stream` / `--no-stream` – switch between detailed LangGraph streaming and single-response mode (choose at most one)
 
 See `USAGE.md` for the full CLI reference, troubleshooting, and workflow examples.
 

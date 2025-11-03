@@ -64,6 +64,7 @@ python -m src.sql_agent --model "openai:gpt-4"
 - `--log-path PATH`: Write every conversation turn to a JSONL file
 - `--event-stream`: Stream LangGraph events (tool invocations, token batches)
 - `--no-stream`: Disable incremental token streaming and print only the final reply
+  > Tip: `--event-stream` and `--no-stream` are mutually exclusive; omit both for default token streaming.
 
 ### Language
 
@@ -122,4 +123,5 @@ The launcher requires `.env` to exist. Copy `example.env` to `.env` and populate
 - SQLite checkpoints require `pip install 'langgraph[sqlite]'`
 - Redis checkpoints require `pip install 'langgraph[redis]' redis`
 - MCP integration requires `pip install langchain-mcp-adapters`
+- The synchronous MCP loader now expects to run outside any active asyncio event loop. If you are extending the project from async code, import and await `src.sql_agent_mcp.aload_mcp_tools` instead of calling the blocking helper.
 

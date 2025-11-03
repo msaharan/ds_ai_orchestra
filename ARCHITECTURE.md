@@ -39,7 +39,7 @@ graph TD
 
 #### MCP toolkit (`src/sql_agent_mcp.py`)
 - Loads Model Context Protocol servers defined in configuration files.
-- Wraps async MCP handlers for synchronous use inside the agent.
+- Exposes both blocking (`load_mcp_tools`) and async (`aload_mcp_tools`) loaders so integrations can choose the right execution model.
 - Merges MCP tools with the SQL toolkit when the runtime starts.
 
 ### Memory and state

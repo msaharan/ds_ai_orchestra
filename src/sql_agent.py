@@ -1,5 +1,3 @@
-"""SQL agent for studio."""
-
 from __future__ import annotations
 
 import argparse
@@ -147,6 +145,7 @@ STRUCTURED_PROMPTS = {
 
 DEFAULT_TONE_PROMPT = "\n- Provide concise answers with clear takeaways."
 DEFAULT_RESPONSE_SUFFIX = "Respond in English with concise, decision-ready phrasing."
+DEFAULT_LOCALE_PROMPT = f"\n- {DEFAULT_RESPONSE_SUFFIX}"
 
 def build_system_prompt(
     db: SQLDatabase,
@@ -161,7 +160,7 @@ def build_system_prompt(
         else ""
     )
     tone_lines = DEFAULT_TONE_PROMPT
-    locale_lines = "\n- Respond in English with concise, decision-ready phrasing."
+    locale_lines = DEFAULT_LOCALE_PROMPT
 
     return f"""You are a careful SQLite analyst.
 {tone_lines}{locale_lines}
@@ -617,18 +616,7 @@ if __name__ == "__main__":
     )
 
     validate_environment(args.example_env)
-    mcp_tools: Optional[list[Any]] = None
-    if args.mcp_config:
-        try:
-            config = load_mcp_config(args.mcp_config)
-            mcp_tools = load_mcp_tools(config)
-        except Exception as exc:  # pragma: no cover - optional feature
-            print(f"Warning: failed to load MCP tools: {exc}")
-    elif args.enable_mcp_time:
-        try:
-            mcp_tools = load_mcp_tools(DEFAULT_TIME_MCP)
-        except Exception as exc:  # pragma: no cover - optional feature
-            print(f"Warning: failed to load MCP time tools: {exc}")
+    mcp_tools = get_mcp_tools(args)
 
     if mcp_tools:
         tool_names = ", ".join(sorted(tool.name for tool in mcp_tools if getattr(tool, "name", None)))

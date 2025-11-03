@@ -11,15 +11,6 @@ from typing import Any, Dict, Iterable, List, Optional
 from langchain_core.tools import StructuredTool, Tool
 
 
-def _ensure_asyncio() -> asyncio.AbstractEventLoop:
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
-
-
 @dataclass
 class MCPConfig:
     """Configuration for connecting to one or more MCP servers."""
@@ -57,8 +48,8 @@ def load_mcp_config(value: str) -> MCPConfig:
     return MCPConfig(servers=servers, use_standard_content_blocks=use_standard)
 
 
-def load_mcp_tools(config: MCPConfig) -> List[Any]:
-    """Connect to configured MCP servers and return LangChain Tool objects."""
+async def aload_mcp_tools(config: MCPConfig) -> List[Any]:
+    """Async variant of ``load_mcp_tools`` for callers already on an event loop."""
 
     try:
         from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -67,21 +58,48 @@ def load_mcp_tools(config: MCPConfig) -> List[Any]:
             "langchain-mcp-adapters is required for MCP integration"
         ) from exc
 
-    async def _load() -> List[Any]:
-        try:
-            client = MultiServerMCPClient(
-                config.servers,
-                use_standard_content_blocks=config.use_standard_content_blocks,
-            )
-        except TypeError:
-            client = MultiServerMCPClient(config.servers)
-        tools = await client.get_tools()
-        return [_wrap_mcp_tool(tool) for tool in tools]
+    try:
+        client = MultiServerMCPClient(
+            config.servers,
+            use_standard_content_blocks=config.use_standard_content_blocks,
+        )
+    except TypeError:
+        client = MultiServerMCPClient(config.servers)
 
-    loop = _ensure_asyncio()
-    if loop.is_running():  # pragma: no cover - not expected in CLI
-        return loop.run_until_complete(_load())
-    return loop.run_until_complete(_load())
+    try:
+        tools = await client.get_tools()
+    finally:
+        # Prefer async close, but handle sync client shutdown too.
+        close = getattr(client, "aclose", None)
+        if callable(close):
+            await close()  # type: ignore[misc]
+        else:
+            close = getattr(client, "close", None)
+            if callable(close):
+                close()
+
+    return [_wrap_mcp_tool(tool) for tool in tools]
+
+
+def load_mcp_tools(config: MCPConfig) -> List[Any]:
+    """Connect to configured MCP servers and return LangChain Tool objects."""
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(aload_mcp_tools(config))
+
+    if loop.is_running():
+        raise RuntimeError(
+            "load_mcp_tools() cannot run inside an active event loop; "
+            "use await aload_mcp_tools(...) instead."
+        )
+
+    raise RuntimeError(
+        "No running event loop detected but asyncio.get_running_loop() "
+        "succeeded; this is unexpected. Use asyncio.run or await the async "
+        "variant directly."
+    )
 
 
 def merge_tools(*groups: Iterable[Any]) -> List[Any]:
@@ -148,6 +166,7 @@ def _wrap_mcp_tool(tool: Any) -> Any:
 __all__ = [
     "MCPConfig",
     "DEFAULT_TIME_MCP",
+    "aload_mcp_tools",
     "load_mcp_config",
     "load_mcp_tools",
     "merge_tools",
