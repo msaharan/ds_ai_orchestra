@@ -59,7 +59,7 @@ graph TD
 - Access to `sqlite_master`, PRAGMA commands, and unrestricted `SELECT *` queries is blocked.
 
 ### Tone and personalization
-- A concise English (US) instruction block in the system prompt keeps answers focused on key takeaways.
+- A concise English instruction block in the system prompt keeps answers focused on key takeaways.
 - Customer identity tracking keeps per-thread context for personalization and filtering.
 
 ### Structured output

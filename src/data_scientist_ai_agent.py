@@ -151,7 +151,7 @@ STRUCTURED_PROMPTS = {
 }
 
 DEFAULT_TONE_PROMPT = "\n- Provide concise answers with clear takeaways."
-DEFAULT_RESPONSE_SUFFIX = "Respond in English (US) with concise, decision-ready phrasing."
+DEFAULT_RESPONSE_SUFFIX = "Respond in English with concise, decision-ready phrasing."
 
 AGG_FUNCTION_MARKERS = ("max(", "min(", "count(", "sum(", "avg(", "distinct ")
 
@@ -206,7 +206,7 @@ def build_system_prompt(
         else ""
     )
     tone_lines = DEFAULT_TONE_PROMPT
-    locale_lines = "\n- Respond in English (US) with concise, decision-ready phrasing."
+    locale_lines = "\n- Respond in English with concise, decision-ready phrasing."
 
     return f"""You are a careful SQLite analyst.
 {tone_lines}{locale_lines}

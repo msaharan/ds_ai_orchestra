@@ -48,7 +48,7 @@ python -m src.data_scientist_ai_agent --model "openai:gpt-4"
 
 ### Language
 
-- Responses are always produced in English (US).
+- Responses are always produced in English.
 
 ### Human-in-the-Loop
 

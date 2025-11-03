@@ -10,7 +10,7 @@ A LangGraph-based SQL agent that provides conversational access to SQLite databa
 - Structured JSON output when schemas are registered
 - Tooling extensibility through Model Context Protocol (MCP) servers and custom Python tools
 - Executive-ready answers with concise takeaways by default
-- Responses are always returned in English (US)
+- Responses are always returned in English
 
 ## Quick Start
 
