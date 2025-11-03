@@ -398,12 +398,8 @@ async def _event_stream_interaction(
         data = event.get("data") if isinstance(event, dict) else None
         if data is None:
             data = {}
-        name = event.get("name") or data.get("name") if isinstance(event, dict) else None
 
-        if event_type in {"on_chain_start", "on_graph_start"}:
-            print(f"🔁 Chain start: {name}")
-        elif event_type in {"on_chain_end", "on_graph_end"}:
-            print("🔚 Chain end")
+        if event_type in {"on_chain_end", "on_graph_end"}:
             output = data.get("output") if isinstance(data, dict) else None
             if isinstance(output, dict):
                 messages = (
@@ -415,14 +411,6 @@ async def _event_stream_interaction(
                     candidate = messages[-1]
                     if isinstance(candidate, BaseMessage):
                         final_ai_message = candidate
-        elif event_type == "on_tool_start":
-            inputs = None
-            if isinstance(data, dict):
-                inputs = data.get("input") or data.get("inputs")
-            print(f"⚙️  Tool start: {name or 'unknown'} | inputs={inputs}")
-        elif event_type == "on_tool_end":
-            output = data.get("output") if isinstance(data, dict) else None
-            print(f"✅ Tool end: {name or 'unknown'} | output={output}")
         elif event_type in {"on_chat_model_stream", "on_llm_stream"}:
             text = None
             if isinstance(data, dict):
@@ -446,7 +434,8 @@ async def _event_stream_interaction(
                     if isinstance(message, BaseMessage):
                         final_ai_message = message
 
-    print()
+    if saw_text_chunk:
+        print()
     if final_ai_message is not None and not saw_text_chunk:
         final_ai_message.pretty_print()
     return final_ai_message
