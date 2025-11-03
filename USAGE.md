@@ -1,5 +1,7 @@
 # Running the Data Science AI Agent
 
+Start with the setup snapshot in `README.md` to install dependencies and configure environment variables. This document focuses on day-to-day invocation, supported flags, and troubleshooting tips.
+
 ## Quick Start
 
 ### Using the shell script (recommended)
@@ -16,10 +18,10 @@
 
 ```bash
 # Run with default settings
-uv run python -m src.data_science_ai_agent
+uv run python -m src.data_scientist_ai_agent
 
 # Run with custom options
-uv run python -m src.data_science_ai_agent --model "openai:gpt-4" --persona friendly
+uv run python -m src.data_scientist_ai_agent --model "openai:gpt-4" --persona friendly
 ```
 
 ### Using Python directly
@@ -29,10 +31,10 @@ uv run python -m src.data_science_ai_agent --model "openai:gpt-4" --persona frie
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Run the agent
-python -m src.data_science_ai_agent
+python -m src.data_scientist_ai_agent
 
 # Or with custom options
-python -m src.data_science_ai_agent --model "openai:gpt-4" --persona friendly
+python -m src.data_scientist_ai_agent --model "openai:gpt-4" --persona friendly
 ```
 
 ## Command Line Options
@@ -113,18 +115,6 @@ python -m src.data_science_ai_agent --model "openai:gpt-4" --persona friendly
 ### Log conversations to file
 ```bash
 ./run.sh --log-path conversations.jsonl
-```
-
-## Environment Setup
-
-Make sure you have a `.env` file with your API keys:
-
-```bash
-# Create .env from template
-cp example.env .env
-
-# Edit .env and add your keys
-OPENAI_API_KEY=your_key_here
 ```
 
 ## Troubleshooting

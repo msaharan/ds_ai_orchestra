@@ -1,83 +1,73 @@
+# Data Scientist AI Agent
 
-## Setup 
+A LangGraph-based SQL agent that provides conversational access to SQLite databases with memory, human-in-the-loop approvals, and MCP extensibility.
 
-### Prerequisites
+## Capabilities
 
-- Ensure you're using Python 3.11 - 3.13.
-- [uv](https://docs.astral.sh/uv/) package manager or [pip](https://pypi.org/project/pip/)
-- OpenAI API key
-- Node.js and npx (required for MCP server in notebook 3):
-```bash
-# Install Node.js (includes npx)
-# On macOS with Homebrew:
-brew install node
+- Conversational SQL agent built on LangGraph and LangChain
+- Memory backends for ephemeral or persistent state (in-memory, SQLite, Redis)
+- Guardrails for read-only SQL execution, rate limiting, and optional approvals
+- Structured JSON output when schemas are registered
+- Tooling extensibility through Model Context Protocol (MCP) servers and custom Python tools
 
-# On Ubuntu/Debian:
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Verify installation:
-node --version
-npx --version
-```
-
-### Installation
-
-Download the course repository
+## Quick Start
 
 ```bash
-# Clone the repo, cd to 'python' directory
-git clone https://github.com/msharan/data_science_ai_agent.git
+python -m src.data_scientist_ai_agent
 ```
 
-Make a copy of example.env
+- Use `./run.sh` or `uv run python -m src.data_scientist_ai_agent` if you prefer wrapper scripts.
+- See `USAGE.md` for additional launch options, persona settings, and flag descriptions.
 
-```bash
-# Create .env file
-cp example.env .env
-```
-
-Insert API keys directly into .env file, OpenAI (required) and [LangSmith](#getting-started-with-langsmith) (optional)
-
-```bash
-# Add OpenAI API key
-OPENAI_API_KEY=your_openai_api_key_here
-# The course is written with OpenAI models, but you can choose others if you prefer. 
-# Be sure to add the key and modify the code to call your preferred model
-#ANTHROPIC_API_KEY=your_anthropic_api_key_here_if_you_prefer
-
-# Optional API key for LangSmith tracing
-LANGSMITH_API_KEY=your_langsmith_api_key_here
-LANGSMITH_TRACING=true
-LANGSMITH_PROJECT=langgraph-py-essentials
-# If you are on the EU instance:
-LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
+### Example conversation
 
 ```
+You: How many customers do we have?
+Agent: We have 59 customers in the database.
 
-Make a virtual environment and install dependancies
-```bash
-# Create virtual environment and install dependancies
-uv sync
+You: This is Julia Barnett
+Agent: Hello Julia! How can I help you today?
+
+You: What's my total spending?
+Agent: Your total spending is $43.86.
 ```
 
-Run notebooks
+## Setup Snapshot
 
-```bash
-# Run Jupyter notebooks directly with uv
-uv run jupyter lab
+1. Install Python 3.11–3.13 and [`uv`](https://docs.astral.sh/uv/) (or `pip`).
+2. Clone the repository and sync dependencies:
+   ```bash
+   git clone https://github.com/msharan/data_scientist_ai_agent.git
+   cd data_scientist_ai_agent
+   uv sync
+   ```
+3. Copy `.env` and add API keys:
+   ```bash
+   cp example.env .env
+   ```
+   Add `OPENAI_API_KEY` (required) and optional LangSmith or alternative model keys.
+4. For MCP notebook examples, ensure Node.js and `npx` are installed.
 
-# Or activate the virtual environment if preferred
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-jupyter lab
-```
+Detailed environment, notebook, and LangSmith instructions live in `USAGE.md`.
 
-Optional: Setup [LangSmith Studio](https://docs.langchain.com/oss/python/langchain/studio)
+## Architecture & Extensibility
 
-```bash
-# copy the .env file you created above to the studio directory
-cp .env ./studio/.
+- High-level system design and component descriptions are in `ARCHITECTURE.md`.
+- That document also covers safety controls, personalization, and how to register custom tools or MCP integrations.
 
-#to run
-langgraph dev
-```
+## Security Highlights
+
+- Read-only SQL validation with enforced LIMIT clauses
+- Global rate limiting (default 8 queries / 10 seconds)
+- Optional human-in-the-loop approvals for risky queries
+
+Full security guidance appears in `ARCHITECTURE.md`.
+
+## Additional Resources
+
+- `USAGE.md` – command-line flags, run scripts, and walkthroughs
+- `ARCHITECTURE.md` – system internals and extension patterns
+- `USAGE.md` also links to notebook workflows and LangSmith setup
+- `CONTRIBUTING.md` (if present) – contribution process
+
+External references: [LangChain](https://python.langchain.com/), [LangGraph](https://langchain-ai.github.io/langgraph/), [Model Context Protocol](https://modelcontextprotocol.io/), [LangSmith](https://docs.smith.langchain.com/)

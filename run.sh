@@ -8,10 +8,10 @@ cd "$SCRIPT_DIR"
 # Check if using uv (recommended)
 if command -v uv &> /dev/null; then
     echo "Running with uv..."
-    uv run python -m src.data_science_ai_agent "$@"
+    uv run python -m src.data_scientist_ai_agent "$@"
 else
     # Fallback to regular python
     echo "Running with python..."
-    python -m src.data_science_ai_agent "$@"
+    python -m src.data_scientist_ai_agent "$@"
 fi
 

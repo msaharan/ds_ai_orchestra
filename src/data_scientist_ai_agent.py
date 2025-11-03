@@ -36,13 +36,13 @@ except ImportError:  # pragma: no cover - optional dependency
     RedisSaver = None  # type: ignore[assignment]
 
 from pydantic import BaseModel, ValidationError
-from .data_science_ai_agent_mcp import (
+from .data_scientist_ai_agent_mcp import (
     DEFAULT_TIME_MCP,
     MCPConfig,
     load_mcp_config,
     load_mcp_tools,
 )
-from .data_science_ai_agent_tools import (
+from .data_scientist_ai_agent_tools import (
     MAX_QUERIES_PER_WINDOW,
     QUERY_WINDOW_SECONDS,
     RuntimeContext,
