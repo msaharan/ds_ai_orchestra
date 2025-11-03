@@ -5,22 +5,18 @@
 ```mermaid
 graph TD
     User --> CLI[CLI interface]
-    CLI --> Agent{AI agent (LangGraph)}
-    Agent --> Prompt[System prompt (concise tone)]
+    CLI --> Agent{LangGraph agent}
+    Agent --> Prompt[System prompt]
     Agent --> ToolSelect[Tool selection]
     ToolSelect --> SQLTools[SQL toolkit]
     ToolSelect --> MCPTools[MCP toolkit]
-    SQLTools --> RateLimit[Rate limiter]
-    MCPTools --> RateLimit
-    RateLimit --> Safety[Query validator]
-    Safety --> Runtime[(Runtime context: database, max_rows)]
+    SQLTools --> Validator[Read-only validator]
+    Validator --> Runtime[(Runtime context: SQLDatabase)]
     Runtime --> Database[(SQLite database)]
-    Agent --> HITL[Human-in-the-loop middleware]
-    HITL --> Decision[Approve or reject query]
-    Decision --> Runtime
+    MCPTools --> Runtime
     Runtime --> Result[Query results]
     Result --> Agent
-    Agent --> Memory[(Checkpointer: in-memory, SQLite, Redis)]
+    Agent --> Memory[(Checkpointer: InMemory/SQLite/Redis)]
     Memory --> Agent
     Agent --> Logger[Conversation logger]
     Agent --> Output[Response to user]
@@ -30,14 +26,14 @@ graph TD
 ## Core Components
 
 ### Agent layer
-- Built with LangGraph and LangChain; each conversation runs inside a graph state machine.
-- Maintains thread-scoped state with message history and runtime context.
-- Supports middleware hooks for human approval and logging.
+- `build_agent_and_context` creates a LangGraph agent via `create_agent`, seeding it with the SQL database, optional MCP tools, and the chosen checkpointer.
+- Conversation state lives in the LangGraph runtime; the CLI passes `thread_id` so checkpoints can be resumed across launches.
+- The system prompt injects table schema, tone instructions, and optional structured output suffixes.
 
 ### Tooling
 
 #### SQL toolkit (`src/data_scientist_ai_agent_tools.py`)
-- `execute_sql`: read-only SELECT execution with automatic LIMIT insertion.
+- `execute_sql`: read-only SELECT execution guarded by `_ensure_read_only`.
 - `list_tables`: enumerates database tables.
 - `describe_table`: PRAGMA-based schema inspection.
 
@@ -47,20 +43,19 @@ graph TD
 - Merges MCP tools with the SQL toolkit when the runtime starts.
 
 ### Memory and state
-- `InMemorySaver`: default, optimized for local development.
-- `SqliteSaver`: persists state to `sql_agent_memory.db`.
-- `RedisSaver`: recommended for multi-instance deployments.
-- Thread IDs allow conversations to resume with prior context; `--reset-memory` clears state.
+- `InMemorySaver` is used by default for disposable sessions.
+- `SqliteSaver` (requires `langgraph[sqlite]`) persists checkpoints to a user-provided path.
+- `RedisSaver` (requires `langgraph[redis]` and `redis`) supports shared deployments via `--redis-url`.
+- `--reset-memory` performs best-effort cleanup for SQLite and Redis backends before reloading the saver.
 
 ### Safety controls
-- `_safe_sql` enforces SELECT-only execution, single statements, and per-query LIMITs.
-- Rate limiting (`_rate_limited`) defaults to eight queries every ten seconds.
-- HITL middleware pauses before execution for manual approval or automatic risk checks.
-- Access to `sqlite_master`, PRAGMA commands, and unrestricted `SELECT *` queries is blocked.
+- `_ensure_read_only` rejects blank statements, non-SELECT queries, and DML/DDL keywords.
+- Structured prompts keep the agent focused on a single tool call per request.
+- The CLI refuses to start if `.env` is missing, ensuring credentials are explicit.
 
 ### Tone and personalization
-- A concise English instruction block in the system prompt keeps answers focused on key takeaways.
-- Customer identity tracking keeps per-thread context for personalization and filtering.
+- The system prompt enforces concise English responses and encourages step-by-step reasoning.
+- Thread identifiers allow the agent to reuse prior conversation context when checkpoints are enabled.
 
 ### Structured output
 - Pydantic models (for example `InvoiceSummary`) describe JSON responses.
@@ -77,14 +72,13 @@ graph TD
 ## Security Architecture
 
 ### Defense in depth
-1. Query validation: regex checks and statement counting block writes and multi-statements.
-2. Rate limiting: process-wide guard prevents burst traffic.
-3. Human approval: optional manual review or risk-based auto-approval.
-4. Database isolation: read-only connections and enforced row limits.
+1. Query validation: rejects non-SELECT statements and DML/DDL keywords before they reach SQLite.
+2. Database isolation: the agent uses SQLite read-only connections by default and downloads the canonical Chinook snapshot if missing.
+3. Observability: optional JSONL logging (`--log-path`) captures every turn for auditing.
 
 ### Threat model
-**Protected:** SQL injection through multi-statement payloads, unbounded data exfiltration, schema mutation, accidental `SELECT *` without LIMIT.  
-**Not protected:** Slow but legitimate analytical queries, deliberate human overrides, vulnerabilities inside external databases or MCP servers.
+**Protected:** Accidental schema changes, obvious DML/DDL attempts, multi-statement payloads caught by the validator.  
+**Not protected:** Long-running analytical queries, `SELECT *` statements without LIMIT (the agent may produce them), vulnerabilities in external MCP servers, model hallucinations.
 
 ## Database Schema
 
@@ -97,6 +91,6 @@ The agent targets the Chinook sample database.
 Key relationships mirror the Chinook ERD (for example an `Album` has many `Track` records). Typical analytical queries include tracking top selling tracks or customer lifetime value.
 
 ### Observability
-- Every message, tool call, and error is recorded as JSON Lines via the conversation logger.
-- CLI flags enable three modes: streaming, event streaming (`--event-stream`), and non-streaming (`--no-stream`).
-- Optional LangSmith instrumentation provides trace-level visibility.
+- Optional conversation logger writes user and assistant payloads to JSONL.
+- CLI flags allow token streaming, verbose event logs (`--event-stream`), or single-shot responses (`--no-stream`).
+- LangSmith instrumentation can be added externally by configuring environment variables consumed by LangChain.

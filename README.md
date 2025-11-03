@@ -1,27 +1,60 @@
 # Data Scientist AI Agent
 
-A LangGraph-based SQL agent that provides conversational access to SQLite databases with memory, human-in-the-loop approvals, and MCP extensibility.
+Conversational SQL assistant built with LangGraph that delivers concise, decision-ready answers backed by the Chinook sample database. The agent enforces read-only access and can be extended with Model Context Protocol (MCP) tools.
 
-## Capabilities
+## Highlights
 
-- Conversational SQL agent built on LangGraph and LangChain
-- Memory backends for ephemeral or persistent state (in-memory, SQLite, Redis)
-- Guardrails for read-only SQL execution, rate limiting, and optional approvals
-- Structured JSON output when schemas are registered
-- Tooling extensibility through Model Context Protocol (MCP) servers and custom Python tools
-- Executive-ready answers with concise takeaways by default
-- Responses are always returned in English
+- LangGraph-powered agent with step-by-step SQL planning and tool arbitration
+- Memory backends for ephemeral sessions (`memory`) or persistence (`sqlite`, `redis`)
+- Built-in guardrails: read-only SQL enforcement via input validation
+- Structured JSON output via `--structured-output` presets
+- MCP integration for augmenting the SQL toolkit with external services
+- Conversation logging and event streaming for observability
 
-## Quick Start
+## Requirements
+
+- Python 3.11–3.13
+- [`uv`](https://docs.astral.sh/uv/) (recommended) or `pip`
+- OpenAI-compatible API key exposed as `OPENAI_API_KEY` in `.env`
+- Optional: Redis (for `--memory-backend redis`), Node.js/npm (`npx`) for the sample MCP time server, LangSmith credentials for tracing
+
+> The entry point refuses to start if `.env` is missing. Copy `example.env` and populate the required keys before launching.
+
+## Installation
 
 ```bash
-python -m src.data_scientist_ai_agent
+git clone https://github.com/msharan/data_scientist_ai_agent.git
+cd data_scientist_ai_agent
+uv sync  # or: python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+cp example.env .env
+# edit .env to set OPENAI_API_KEY=<your key>
 ```
 
-- Use `./run.sh` or `uv run python -m src.data_scientist_ai_agent` if you prefer wrapper scripts.
-- See `USAGE.md` for additional launch options and flag descriptions.
+The first run downloads `Chinook.db` automatically to the project root unless you point `--db-path` elsewhere.
 
-### Example conversation
+## Run the Agent
+
+```bash
+# Quick start (uses defaults from .env)
+python -m src.data_scientist_ai_agent
+
+# Wrapper options
+./run.sh
+uv run python -m src.data_scientist_ai_agent
+```
+
+Helpful flags:
+
+- `--model openai:gpt-4o-mini` – pick any model supported by `langchain.chat_models.init_chat_model`
+- `--structured-output invoice_summary` – return validated JSON for invoice summaries
+- `--memory-backend sqlite --memory-path ./state/agent.db` – persist conversation context between runs
+- `--enable-mcp-time` or `--mcp-config path/to/config.json` – attach MCP tool servers
+- `--log-path run/conversation.jsonl` – capture every user and agent message for auditing
+- `--event-stream` / `--no-stream` – switch between detailed LangGraph streaming and single-response mode
+
+See `USAGE.md` for the full CLI reference, troubleshooting, and workflow examples.
+
+### Example Conversation
 
 ```
 You: How many customers do we have?
@@ -34,42 +67,19 @@ You: What's my total spending?
 Agent: Your total spending is $43.86.
 ```
 
-## Setup Snapshot
+## Project Layout
 
-1. Install Python 3.11–3.13 and [`uv`](https://docs.astral.sh/uv/) (or `pip`).
-2. Clone the repository and sync dependencies:
-   ```bash
-   git clone https://github.com/msharan/data_scientist_ai_agent.git
-   cd data_scientist_ai_agent
-   uv sync
-   ```
-3. Copy `.env` and add API keys:
-   ```bash
-   cp example.env .env
-   ```
-   Add `OPENAI_API_KEY` (required) and optional LangSmith or alternative model keys.
-4. For MCP notebook examples, ensure Node.js and `npx` are installed.
+- `src/data_scientist_ai_agent.py` – CLI entry point, LangGraph wiring, memory + structured output handling
+- `src/data_scientist_ai_agent_tools.py` – SQL tool implementations and runtime context
+- `src/data_scientist_ai_agent_mcp.py` – MCP configuration loader and adapters
+- `local/` – planning notes and teaching material (Chinook ERD)
 
-Detailed environment, notebook, and LangSmith instructions live in `USAGE.md`.
+Refer to `ARCHITECTURE.md` for a deeper system walkthrough and safety model.
 
-## Architecture & Extensibility
+## Related Documentation
 
-- High-level system design and component descriptions are in `ARCHITECTURE.md`.
-- That document also covers safety controls and how to register custom tools or MCP integrations.
-
-## Security Highlights
-
-- Read-only SQL validation with enforced LIMIT clauses
-- Global rate limiting (default 8 queries / 10 seconds)
-- Optional human-in-the-loop approvals for risky queries
-
-Full security guidance appears in `ARCHITECTURE.md`.
-
-## Additional Resources
-
-- `USAGE.md` – command-line flags, run scripts, and walkthroughs
-- `ARCHITECTURE.md` – system internals and extension patterns
-- `USAGE.md` also links to notebook workflows and LangSmith setup
-- `CONTRIBUTING.md` (if present) – contribution process
+- `ARCHITECTURE.md` – runtime topology, safety layers, and extension points
+- `USAGE.md` – CLI flags, launch recipes, and troubleshooting
+- `local/plan_focus_data_science.md` – example analysis prompts and workflows
 
 External references: [LangChain](https://python.langchain.com/), [LangGraph](https://langchain-ai.github.io/langgraph/), [Model Context Protocol](https://modelcontextprotocol.io/), [LangSmith](https://docs.smith.langchain.com/)

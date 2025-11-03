@@ -42,41 +42,32 @@ python -m src.data_scientist_ai_agent --model "openai:gpt-4"
 ### Basic Options
 
 - `--thread-id TEXT`: Identifier for checkpointed memory (default: `demo-thread-1`)
-- `--model TEXT`: Model identifier (default: `openai:gpt-3.5-turbo`)
-- `--db-path PATH`: Path to Chinook SQLite database (default: `./Chinook.db`)
-- `--max-rows INT`: Maximum rows in SQL responses (default: `5`)
+- `--model TEXT`: Model identifier passed to LangChain (default: `openai:gpt-3.5-turbo`)
+- `--db-path PATH`: Path to the Chinook SQLite database (default: project root `Chinook.db`)
+- `--example-env PATH`: Alternate `.env` template checked during startup (default: `example.env`)
 
-### Language
+### Memory & State
 
-- Responses are always produced in English.
-
-### Human-in-the-Loop
-
-- `--hitl`: Enable human-in-the-loop approvals for SQL tool calls
-- `--hitl-auto-approve`: Automatically approve low-risk SQL queries when HITL is enabled
-
-### Memory/Checkpointing
-
-- `--memory-backend {memory,sqlite,redis}`: Checkpoint backend (default: `memory`)
+- `--memory-backend {memory,sqlite,redis}`: Choose checkpoint storage (default: `memory`)
 - `--memory-path PATH`: SQLite file for `--memory-backend=sqlite` (default: `sql_agent_memory.db`)
 - `--redis-url TEXT`: Redis URL when `--memory-backend=redis` (default: `redis://localhost:6379/0`)
-- `--reset-memory`: Clear existing persisted memory before starting
+- `--reset-memory`: Clears the selected backend before launching (best effort for SQLite/Redis)
 
 ### MCP Tools
 
-- `--enable-mcp-time`: Enable the sample MCP time server tools
-- `--mcp-config PATH`: Path or JSON string describing MCP servers
+- `--enable-mcp-time`: Attach the sample MCP time server (requires `npx`)
+- `--mcp-config PATH_OR_JSON`: Load a custom MCP configuration; takes precedence over `--enable-mcp-time`
 
-### Output Options
+### Output & Observability
 
-- `--log-path PATH`: Optional path to JSONL file for recording conversations
-- `--event-stream`: Stream detailed LangGraph events
-- `--no-stream`: Disable streaming and wait for final answer only
-- `--structured-output {none,invoice_summary}`: Emit structured JSON for certain tasks
+- `--structured-output {none,invoice_summary}`: Validate responses against a Pydantic schema
+- `--log-path PATH`: Write every conversation turn to a JSONL file
+- `--event-stream`: Stream LangGraph events (tool invocations, token batches)
+- `--no-stream`: Disable incremental token streaming and print only the final reply
 
-### Other Options
+### Language
 
-- `--example-env PATH`: Path to example env file for validation (default: `example.env`)
+Responses are produced in English; the system prompt enforces concise answers with key takeaways.
 
 ## Examples
 
@@ -96,11 +87,6 @@ python -m src.data_scientist_ai_agent --model "openai:gpt-4"
 ./run.sh --memory-backend sqlite --memory-path my_agent_memory.db
 ```
 
-### With human-in-the-loop approval
-```bash
-./run.sh --hitl
-```
-
 ### With MCP time tools
 ```bash
 ./run.sh --enable-mcp-time
@@ -109,6 +95,11 @@ python -m src.data_scientist_ai_agent --model "openai:gpt-4"
 ### Reset memory and start fresh
 ```bash
 ./run.sh --memory-backend sqlite --reset-memory
+```
+
+### Emit structured JSON
+```bash
+./run.sh --structured-output invoice_summary
 ```
 
 ### Log conversations to file
@@ -122,8 +113,13 @@ python -m src.data_scientist_ai_agent --model "openai:gpt-4"
 If you get import errors, make sure you're running from the project root directory and using the `-m` flag to run as a module.
 
 ### Database not found
-Ensure `Chinook.db` exists in the project root, or specify a custom path with `--db-path`.
+The CLI downloads `Chinook.db` on first run. If that fails, ensure outgoing network access and rerun, or provide a local copy with `--db-path`.
 
 ### Environment variables not loaded
-Make sure your `.env` file is in the project root directory.
+The launcher requires `.env` to exist. Copy `example.env` to `.env` and populate `OPENAI_API_KEY` (plus any optional LangSmith keys). Use `--example-env` to validate a different template.
+
+### Optional dependencies missing
+- SQLite checkpoints require `pip install 'langgraph[sqlite]'`
+- Redis checkpoints require `pip install 'langgraph[redis]' redis`
+- MCP integration requires `pip install langchain-mcp-adapters`
 
