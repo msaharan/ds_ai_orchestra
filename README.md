@@ -72,7 +72,6 @@ Agent: Your total spending is $43.86.
 - `src/sql_agent.py` – CLI entry point for the SQL agent (LangGraph wiring, memory, structured output handling)
 - `src/sql_agent_tools.py` – SQL tool implementations and runtime context
 - `src/sql_agent_mcp.py` – MCP configuration loader and adapters
-- `local/` – planning notes and teaching material (Chinook ERD)
 
 Refer to `ARCHITECTURE.md` for a deeper system walkthrough and safety model.
 
