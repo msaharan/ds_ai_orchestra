@@ -1,6 +1,7 @@
 
 # Ignore database files and private local files
 *.db
+*.csv
 *local/
 *logs/*
 
