@@ -30,7 +30,7 @@ cp example.env .env
 # edit .env to set OPENAI_API_KEY=<your key>
 ```
 
-The first run downloads `Chinook.db` automatically to the project root unless you point `--db-path` elsewhere.
+The first run downloads `Chinook.db` automatically to the `data/` directory unless you point `--db-path` elsewhere.
 
 ## Run the Agent
 

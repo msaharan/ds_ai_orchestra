@@ -43,7 +43,7 @@ python -m src.sql_agent --model "openai:gpt-4"
 
 - `--thread-id TEXT`: Identifier for checkpointed memory (default: `demo-thread-1`)
 - `--model TEXT`: Model identifier passed to LangChain (default: `openai:gpt-3.5-turbo`)
-- `--db-path PATH`: Path to the Chinook SQLite database (default: project root `Chinook.db`)
+- `--db-path PATH`: Path to the Chinook SQLite database (default: `data/Chinook.db`)
 - `--example-env PATH`: Alternate `.env` template checked during startup (default: `example.env`)
 
 ### Memory & State
@@ -114,7 +114,7 @@ Responses are produced in English; the system prompt enforces concise answers wi
 If you get import errors, make sure you're running from the project root directory and using the `-m` flag to run as a module.
 
 ### Database not found
-The CLI downloads `Chinook.db` on first run. If that fails, ensure outgoing network access and rerun, or provide a local copy with `--db-path`.
+The CLI downloads `Chinook.db` to the `data/` directory on first run. If that fails, ensure outgoing network access and rerun, or provide a local copy with `--db-path`.
 
 ### Environment variables not loaded
 The launcher requires `.env` to exist. Copy `example.env` to `.env` and populate `OPENAI_API_KEY` (plus any optional LangSmith keys). Use `--example-env` to validate a different template.

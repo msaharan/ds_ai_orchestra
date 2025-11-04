@@ -65,7 +65,7 @@ except ImportError:  # pragma: no cover - optional outside primary project root
 
 
 CHINOOK_URL = "https://storage.googleapis.com/benchmarks-artifacts/chinook/Chinook.db"
-DEFAULT_DB_PATH = pathlib.Path(__file__).resolve().parents[2] / "Chinook.db"
+DEFAULT_DB_PATH = pathlib.Path(__file__).resolve().parents[2] / "data" / "Chinook.db"
 DEFAULT_MODEL = "openai:gpt-3.5-turbo"
 
 
