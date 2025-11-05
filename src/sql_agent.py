@@ -9,7 +9,7 @@ import json
 import pathlib
 import sys
 import time
-from typing import Any, Optional, Tuple, Type
+from typing import Any, Iterable, Optional, Tuple, Type
 
 import requests
 from langchain.agents import create_agent
@@ -472,7 +472,7 @@ def load_checkpointer(args: argparse.Namespace) -> Optional[Any]:
     raise ValueError(f"Unsupported memory backend: {backend}")
 
 
-def parse_cli_args() -> argparse.Namespace:
+def parse_cli_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     """Collect command-line arguments for the interactive agent."""
 
     parser = argparse.ArgumentParser(description="Run the SQL agent from the terminal.")
@@ -549,7 +549,7 @@ def parse_cli_args() -> argparse.Namespace:
         action="store_true",
         help="Disable streaming and wait for the final answer only.",
     )
-    return parser.parse_args()
+    return parser.parse_args(list(argv) if argv is not None else None)
 
 
 def get_mcp_tools(args: argparse.Namespace) -> Optional[list[Any]]:
@@ -605,8 +605,8 @@ def _display_structured_output(model: Type[BaseModel], message: BaseMessage) -> 
                 print(f"- {bit}")
 
 
-if __name__ == "__main__":
-    args = parse_cli_args()
+def main(argv: Iterable[str] | None = None) -> None:
+    args = parse_cli_args(argv)
 
     if args.event_stream and args.no_stream:
         raise SystemExit("--event-stream and --no-stream are mutually exclusive")
@@ -677,3 +677,7 @@ if __name__ == "__main__":
         structured_model=structured_model,
         structured_suffix=structured_suffix,
     )
+
+
+if __name__ == "__main__":
+    main()

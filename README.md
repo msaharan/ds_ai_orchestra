@@ -38,6 +38,10 @@ The first run downloads `Chinook.db` automatically to the `data/` directory unle
 # Quick start (uses defaults from .env)
 python -m src.sql_agent
 
+# Unified launcher (select SQL or data science agent)
+python -m src.main --agent sql
+python -m src.main --agent data_science
+
 # Wrapper options
 ./run.sh
 uv run python -m src.sql_agent
