@@ -9,7 +9,7 @@ import json
 import pathlib
 import sys
 import time
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Sequence
 
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
@@ -18,6 +18,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from .datasets import DatasetCatalog, load_catalog
 from .ds_agent_tools import DATA_SCIENCE_TOOLS, DataScienceContext
+from .sql_agent_mcp import MCPConfig, load_mcp_config, load_mcp_tools
 
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -27,7 +28,15 @@ if str(PROJECT_ROOT) not in sys.path:
 DEFAULT_MODEL = "openai:gpt-4o-mini"
 
 
-def build_system_prompt(catalog: DatasetCatalog) -> str:
+def _summarize_mcp_tools(tools: Sequence[Any]) -> str:
+    names = [getattr(tool, "name", "") for tool in tools if getattr(tool, "name", None)]
+    if not names:
+        return ""
+    unique = sorted({name for name in names if name})
+    return ", ".join(unique)
+
+
+def build_system_prompt(catalog: DatasetCatalog, mcp_summary: str | None = None) -> str:
     dataset_names = ", ".join(entry.name for entry in catalog.entries())
     return (
         "You are a careful data science analyst.\n"
@@ -38,7 +47,12 @@ def build_system_prompt(catalog: DatasetCatalog) -> str:
         " with list_task_templates/task_template_details to guide your plan.\n"
         "- Avoid destructive actions and never write to disk.\n"
         "- Keep row outputs concise (prefer <= 20 rows) unless explicitly instructed.\n"
-        f"Known datasets: {dataset_names or 'none registered.'}\n"
+        + (
+            f"- Remote MCP dataset tools available: {mcp_summary}.\n"
+            if mcp_summary
+            else ""
+        )
+        + f"Known datasets: {dataset_names or 'none registered.'}\n"
     )
 
 
@@ -47,12 +61,18 @@ def build_agent(
     model_name: str,
     catalog: DatasetCatalog,
     checkpointer: Optional[Any] = None,
+    mcp_tools: Optional[Sequence[Any]] = None,
+    mcp_summary: str | None = None,
 ) -> tuple[Any, DataScienceContext]:
     context = DataScienceContext(catalog=catalog)
+    active_tools = list(DATA_SCIENCE_TOOLS)
+    if mcp_tools:
+        active_tools.extend(mcp_tools)
+
     agent = create_agent(
         model=init_chat_model(model_name),
-        tools=list(DATA_SCIENCE_TOOLS),
-        system_prompt=build_system_prompt(catalog),
+        tools=active_tools,
+        system_prompt=build_system_prompt(catalog, mcp_summary=mcp_summary),
         context_schema=DataScienceContext,
         checkpointer=checkpointer or InMemorySaver(),
     )
@@ -197,6 +217,12 @@ def parse_cli_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Disable streaming and wait for final answer only.",
     )
+    parser.add_argument(
+        "--mcp-config",
+        help=(
+            "JSON string or path to an MCP configuration providing remote dataset services."
+        ),
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
     if args.event_stream and args.no_stream:
         parser.error("--event-stream and --no-stream are mutually exclusive")
@@ -206,9 +232,29 @@ def parse_cli_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
 def main(argv: Iterable[str] | None = None) -> None:
     args = parse_cli_args(argv)
     catalog = load_catalog(args.catalog)
+    mcp_tools: list[Any] = []
+    mcp_summary: str | None = None
+
+    if args.mcp_config:
+        try:
+            mcp_config = load_mcp_config(str(args.mcp_config))
+        except Exception as exc:  # pragma: no cover - CLI validation
+            print(f"Warning: failed to parse MCP config: {exc}")
+        else:
+            try:
+                mcp_tools = load_mcp_tools(mcp_config)
+            except Exception as exc:  # pragma: no cover - optional dependency/remote errors
+                print(f"Warning: failed to load MCP tools: {exc}")
+            else:
+                mcp_summary = _summarize_mcp_tools(mcp_tools)
+                if mcp_summary:
+                    print(f"Loaded MCP dataset tools: {mcp_summary}")
+
     agent, context = build_agent(
         model_name=args.model,
         catalog=catalog,
+        mcp_tools=mcp_tools,
+        mcp_summary=mcp_summary,
     )
     run_cli(
         agent,
