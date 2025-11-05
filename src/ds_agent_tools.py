@@ -16,6 +16,9 @@ from .ds_agent_templates import available_task_types, get_task_template, templat
 
 MAX_PREVIEW_ROWS = 100
 MAX_ANALYSIS_ROWS = 5000
+MAX_MERGE_PREVIEW_ROWS = 20
+
+_VALID_JOIN_TYPES = {"inner", "left", "right", "outer", "cross"}
 
 
 @dataclass
@@ -28,12 +31,30 @@ class DataScienceContext:
         overrides: Mapping[str, Any] | None = None
         if limit is not None:
             overrides = {"nrows": limit}
-        return self.catalog.load(name, overrides=overrides)
+
+        try:
+            frame = self.catalog.load(name, overrides=overrides)
+        except TypeError as exc:
+            if limit is None or "nrows" not in str(exc):
+                raise
+            frame = self.catalog.load(name)
+
+        if limit is not None:
+            frame = frame.head(limit)
+        return frame
 
 
 def _get_context() -> DataScienceContext:
     runtime = get_runtime(DataScienceContext)
     return runtime.context
+
+
+def _normalise_join_columns(value: str) -> list[str]:
+    parts = [item.strip() for item in value.split(",")]
+    columns = [item for item in parts if item]
+    if not columns:
+        raise ValueError("Join column specification must not be empty.")
+    return columns
 
 
 @tool
@@ -150,6 +171,99 @@ def task_template_details(task_type: str, include_tips: bool = True) -> str:
     return json.dumps(payload, indent=2)
 
 
+@tool
+def merge_datasets(
+    left_dataset: str,
+    right_dataset: str,
+    *,
+    left_on: str,
+    right_on: str | None = None,
+    how: str = "inner",
+    limit: int = 10,
+) -> str:
+    """Join two catalog datasets on the specified keys and preview the merged sample."""
+
+    context = _get_context()
+
+    join_type = how.lower()
+    if join_type not in _VALID_JOIN_TYPES:
+        options = ", ".join(sorted(_VALID_JOIN_TYPES))
+        return f"Unsupported join type '{how}'. Choose from: {options}."
+
+    try:
+        left_keys = _normalise_join_columns(left_on)
+    except ValueError as exc:
+        return f"Invalid left join keys: {exc}"
+
+    right_key_arg = right_on if right_on is not None else left_on
+    try:
+        right_keys = _normalise_join_columns(right_key_arg)
+    except ValueError as exc:
+        return f"Invalid right join keys: {exc}"
+
+    left_frame = context.load_dataset(left_dataset, limit=MAX_ANALYSIS_ROWS)
+    right_frame = context.load_dataset(right_dataset, limit=MAX_ANALYSIS_ROWS)
+
+    missing_left = [column for column in left_keys if column not in left_frame.columns]
+    if missing_left:
+        missing = ", ".join(missing_left)
+        return (
+            f"Columns not found in left dataset '{left_dataset}': {missing}."
+            " Verify the join keys."
+        )
+
+    missing_right = [column for column in right_keys if column not in right_frame.columns]
+    if missing_right:
+        missing = ", ".join(missing_right)
+        return (
+            f"Columns not found in right dataset '{right_dataset}': {missing}."
+            " Verify the join keys."
+        )
+
+    left_key_arg: str | list[str]
+    right_key_arg_final: str | list[str]
+
+    if len(left_keys) == 1:
+        left_key_arg = left_keys[0]
+    else:
+        left_key_arg = left_keys
+
+    if len(right_keys) == 1:
+        right_key_arg_final = right_keys[0]
+    else:
+        right_key_arg_final = right_keys
+
+    try:
+        merged = left_frame.merge(
+            right_frame,
+            how=join_type,
+            left_on=left_key_arg,
+            right_on=right_key_arg_final,
+            suffixes=("_left", "_right"),
+        )
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        return f"Failed to merge datasets: {exc}"
+
+    preview_limit = max(1, min(limit, MAX_MERGE_PREVIEW_ROWS))
+    preview_table = merged.head(preview_limit).to_string(index=False)
+
+    metadata_lines = [
+        f"Left shape: rows={left_frame.shape[0]}, columns={left_frame.shape[1]}",
+        f"Right shape: rows={right_frame.shape[0]}, columns={right_frame.shape[1]}",
+        f"Merged shape: rows={merged.shape[0]}, columns={merged.shape[1]}",
+        f"Join type: {join_type}",
+        f"Join keys: left={left_keys}, right={right_keys}",
+    ]
+
+    return (
+        "\n".join(metadata_lines)
+        + "\n\nPreview (limit="
+        + str(preview_limit)
+        + "):\n"
+        + preview_table
+    )
+
+
 DATA_SCIENCE_TOOLS = [
     list_datasets,
     preview_dataset,
@@ -157,6 +271,7 @@ DATA_SCIENCE_TOOLS = [
     analyze_dataset,
     list_task_templates,
     task_template_details,
+    merge_datasets,
 ]
 
 
@@ -166,6 +281,7 @@ __all__ = [
     "analyze_dataset",
     "list_datasets",
     "list_task_templates",
+    "merge_datasets",
     "profile_dataset_tool",
     "preview_dataset",
     "task_template_details",
