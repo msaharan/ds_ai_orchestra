@@ -92,6 +92,7 @@ Agent: Your total spending is $43.86.
 - `src/ds_agent_tools.py` – Dataset tooling (catalog integration, profiling, merge, logging)
 - `src/ds_agent_templates.py` – Task templates guiding exploratory workflows
 - `src/datasets/` – Dataset abstractions, loader registry, and manifest CLI
+- Sample datasets: the bundled catalog references the Booking.com Multi-Destination Trips dataset. Download the CSV files from [bookingcom/ml-dataset-mdt](https://github.com/bookingcom/ml-dataset-mdt) into `data/bookingcom/` before running the data science agent.
 - `src/data_prep/profile.py` – Profiling logic and caching utilities
 
 Refer to `ARCHITECTURE.md` for a deeper system walkthrough and safety model.

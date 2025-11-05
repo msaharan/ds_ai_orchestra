@@ -109,6 +109,8 @@ python -m src.datasets.catalog describe bookingcom_train
 python -m src.datasets.catalog load bookingcom_train --limit 5
 ```
 
+> The bundled examples in `data/catalog.json` point at the Booking.com Multi-Destination Trips dataset hosted on GitHub (`https://github.com/bookingcom/ml-dataset-mdt`). Download the CSV files from that repository and place them under `data/bookingcom/` before running the agent.
+
 3. At runtime, the agent exposes tools:
    - `list_datasets` to enumerate catalog entries.
    - `preview_dataset` to sample rows (capped at 100).
